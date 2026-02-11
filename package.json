@@ -1,0 +1,18 @@
+{
+  "name": "pandey_gym_backend",
+  "version": "1.0.0",
+  "description": "app contain data of gym trainee and about package details",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "node"
+  ],
+  "author": "Javed Hasan",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1"
+  }
+}
