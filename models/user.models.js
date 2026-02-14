@@ -22,11 +22,10 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String, // cloudinary urlS
-      required: true,
     },
-    coverimage: {
-      type: String,
-    },
+    // coverImage: {
+    //   type: String,
+    // },
     password: {
       type: String,
       required: [true, "password is required"],
@@ -45,10 +44,9 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return;
 
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {

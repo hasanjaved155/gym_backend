@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({
+  path: "./.env",
+});
 import Database from "./db/database.js";
-
 import { app } from "./app.js";
 
 (async () => {
