@@ -4,7 +4,7 @@ import path from "path";
 
 console.log("✅ MULTER MIDDLEWARE LOADING...");
 
-const tempDir = "./public/temp";
+const tempDir = "./temp";
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
   console.log("📁 Created temp directory:", tempDir);
