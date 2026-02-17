@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import crypto from "crypto";
+import { sendEmail } from "./sendEmail.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -37,9 +39,11 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   //check if user already exists:username,email
-  const existingUser = await User.findOne({
-    $or: [{ username }, { email }],
-  });
+  // const existingUser = await User.findOne({
+  //   $or: [{ username }, { email }],
+  // });
+
+  const existingUser = await User.findOne({ email });
 
   if (existingUser) {
     throw new ApiError(409, "User already exist");
@@ -97,11 +101,9 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Either username or email is required");
   }
 
-  const user = await User.findOne({
-    $or: [{ username }, { email }],
-  });
+  const user = await User.findOne({ email });
   if (!user) {
-    throw new ApiError(404, "Emsil id is not registered");
+    throw new ApiError(404, "Email id is not registered");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -140,6 +142,76 @@ export const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  console.log("email", email);
+
+  if (!email) {
+    throw new ApiError(400, "Email is required");
+  }
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "Email id is not registered");
+  }
+
+  // Generate token
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  // Hash token and save to database
+  user.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Set expire time (10 minutes)
+  user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${process.env.CORS_ORIGIN || "http://localhost:5173"}/reset-password/${user._id}/${resetToken}`;
+
+  const message = `You have requested a password reset. Please go to this link to reset your password: \n\n ${resetUrl} \n\n If you did not request this, please ignore this email.`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Password Reset Request",
+      message,
+    });
+
+    res.status(200).send(new ApiResponse(200, {}, "Email sent successfully"));
+  } catch (error) {
+    console.log("Error sending email:", error);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    throw new ApiError(500, "Email could not be sent");
+  }
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { id, token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    throw new ApiError(400, "Password is required");
+  }
+  const user = await User.findOne({
+    _id: id,
+  });
+  if (!user) {
+    throw new ApiError(400, "Invalid or expired reset token");
+  }
+
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  res.status(200).send(new ApiResponse(200, {}, "Password reset successfully"));
+});
+
 export const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
@@ -163,6 +235,19 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
     .send(new ApiResponse(200, {}, "User Logged Out Successfully"));
+});
+
+export const getUserStatus = asyncHandler(async (req, res) => {
+  return res.status(200).send(
+    new ApiResponse(
+      200,
+      {
+        user: req.user,
+        accessToken: req.cookies?.accessToken,
+      },
+      "User authentication status fetched successfully",
+    ),
+  );
 });
 
 export const refreshAccessToken = asyncHandler(async (req, res) => {
