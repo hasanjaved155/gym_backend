@@ -168,7 +168,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const resetUrl = `${process.env.CORS_ORIGIN || "http://localhost:5173"}/reset-password/${user._id}/${resetToken}`;
+  const resetUrl = `${process.env.CORS_ORIGIN || "https://gym-pandey.vercel.app"}/reset-password/${user._id}/${resetToken}`;
 
   const message = `You have requested a password reset. Please go to this link to reset your password: \n\n ${resetUrl} \n\n If you did not request this, please ignore this email.`;
 
