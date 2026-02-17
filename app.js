@@ -22,4 +22,11 @@ import userRouter from "./routes/user.routes.js";
 //routes declaration
 app.use("/api/v1/users", userRouter);
 
+app.use("", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to Gym Management System API",
+  });
+});
+
 export { app };
