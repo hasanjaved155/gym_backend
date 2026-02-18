@@ -164,7 +164,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     .update(resetToken)
     .digest("hex");
 
-  // Set expire time (10 minutes)
+  // Set expire time (10 minutes and after 10 minutes token will be invalid)
   user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
   await user.save({ validateBeforeSave: false });
