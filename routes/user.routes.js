@@ -8,6 +8,7 @@ import {
   refreshAccessToken,
   registerUser,
   resetPassword,
+  updateUserProfile,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -30,5 +31,13 @@ router.get("/auth-status", verifyJWT, getUserStatus);
 router.post("/forgot-password", forgotPassword);
 
 router.post("/reset-password/:id/:token", resetPassword);
+
+//update user profile route (not implemented yet)
+router.patch(
+  "/update-profile",
+  verifyJWT,
+  upload.single("avatar"),
+  updateUserProfile,
+);
 
 export default router;

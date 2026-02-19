@@ -27,13 +27,11 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 export const registerUser = asyncHandler(async (req, res) => {
   // get user details from frontend
-  const { username, email, phonenumber, password } = req.body;
+  const { username, email, joinDate, password } = req.body;
 
   //validation - not empty
   if (
-    [username, email, phonenumber, password].some(
-      (field) => field?.trim() === "",
-    )
+    [username, email, joinDate, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All Fielda are required");
   }
@@ -74,7 +72,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     // coverImage: coverImage?.url || "",
     email,
     password,
-    phonenumber,
+    joinDate,
   });
 
   //remove password and refresh token field from response
@@ -95,10 +93,10 @@ export const registerUser = asyncHandler(async (req, res) => {
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username && !email) {
-    throw new ApiError(400, "Either username or email is required");
+  if (!email) {
+    throw new ApiError(400, "Email is required");
   }
 
   const user = await User.findOne({ email });
@@ -304,4 +302,36 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(401, error?.message || "Invalid refresh token");
   }
+});
+
+export const updateUserProfile = asyncHandler(async (req, res) => {
+  const { username, phonenumber, email } = req.body;
+  const avatarLocalPath = req.file?.path;
+
+  if ([username, phonenumber].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "Username and phonenumber cannot be empty");
+  }
+
+  const user = await User.findOne({ email });
+
+  if (username) {
+    user.username = username;
+  }
+
+  if (phonenumber) {
+    user.phonenumber = phonenumber;
+  }
+
+  if (avatarLocalPath) {
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (avatar?.url) {
+      user.avatar = avatar.url;
+    }
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, user, "Profile updated successfully"));
 });
