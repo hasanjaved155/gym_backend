@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema(
     },
     phonenumber: {
       type: String,
-      required: true,
     },
     avatar: {
       type: String, // cloudinary urlS
@@ -29,6 +28,10 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "password is required"],
+    },
+    joinDate: {
+      type: Date,
+      required: true,
     },
     review: {
       type: Schema.Types.ObjectId,
