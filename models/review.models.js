@@ -7,11 +7,11 @@ const reviewSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    comment: {
+    feedback: {
       type: String,
       required: true,
     },
-    owner: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },

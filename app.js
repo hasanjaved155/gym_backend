@@ -6,7 +6,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN || "https://gym-pandey.vercel.app",
     credentials: true,
   }),
 );
@@ -18,9 +18,11 @@ app.use(cookieParser());
 
 // routes import
 import userRouter from "./routes/user.routes.js";
+import feedbackRouter from "./routes/review.routes.js";
 
 //routes declaration
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/feedback", feedbackRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Gym Management System API");
