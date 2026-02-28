@@ -2,7 +2,7 @@ import { Router } from "express";
 const router = Router();
 import {
   forgotPassword,
-  getUserStatus,
+  getAllUserStatus,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -24,9 +24,9 @@ router.post("/login", loginUser);
 
 router.post("/logout", verifyJWT, logoutUser);
 
-router.post("/RefreshAccessToken", refreshAccessToken);
+router.post("/refresh-access-token", refreshAccessToken);
 
-router.get("/auth-status", verifyJWT, getUserStatus);
+router.get("/all-users", verifyJWT, getAllUserStatus);
 
 router.post("/forgot-password", forgotPassword);
 
