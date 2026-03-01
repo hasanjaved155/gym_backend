@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    expirationDate: {
+      type: Date,
+      required: true,
+    },
+    active: {
+      type: Boolean,
+      default: true,
+    },
     review: {
       type: Schema.Types.ObjectId,
       ref: "Review",

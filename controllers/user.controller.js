@@ -66,6 +66,10 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cloudinary Avatar file is required");
   }
 
+  // ✅ Calculate expirationDate (1 month after joinDate)
+  const expirationDate = new Date(joinDate);
+  expirationDate.setMonth(expirationDate.getMonth() + 1);
+
   //create user object-create entry in db
   const user = await User.create({
     username: username.toLowerCase(),
@@ -74,6 +78,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     joinDate,
+    expirationDate,
   });
 
   //remove password and refresh token field from response
@@ -351,4 +356,38 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .send(new ApiResponse(200, user, "Profile updated successfully"));
+});
+
+export const updateUserAccount = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  console.log(id);
+  const { joinDate, active } = req.body;
+  // console.log(joinDate, active);
+
+  if (!id) {
+    throw new ApiError(400, "User ID is required");
+  }
+  const user = await User.findById(id);
+
+  // ✅ Update joinDate
+  if (joinDate) {
+    user.joinDate = joinDate;
+
+    // ✅ Automatically set expirationDate (1 month after joinDate)
+    const expirationDate = new Date(joinDate);
+    expirationDate.setMonth(expirationDate.getMonth() + 1);
+    user.expirationDate = expirationDate;
+  }
+
+  // ✅ Update active
+
+  if (active !== undefined) {
+    user.active = active;
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, user, "User account updated successfully"));
 });
