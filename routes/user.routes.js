@@ -13,6 +13,7 @@ import {
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { sendExpirationEmail } from "../controllers/expiration-email.controller.js";
 
 router.post(
   "/register",
@@ -40,6 +41,8 @@ router.patch(
   upload.single("avatar"),
   updateUserProfile,
 );
+
+router.post("/send-expiration-email", sendExpirationEmail);
 
 router.patch("/update-account/:id", updateUserAccount);
 
