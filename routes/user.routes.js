@@ -2,16 +2,18 @@ import { Router } from "express";
 const router = Router();
 import {
   forgotPassword,
-  getUserStatus,
+  getAllUserStatus,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
   resetPassword,
+  updateUserAccount,
   updateUserProfile,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { sendExpirationEmail } from "../controllers/expiration-email.controller.js";
 
 router.post(
   "/register",
@@ -24,9 +26,9 @@ router.post("/login", loginUser);
 
 router.post("/logout", verifyJWT, logoutUser);
 
-router.post("/RefreshAccessToken", refreshAccessToken);
+router.post("/refresh-access-token", refreshAccessToken);
 
-router.get("/auth-status", verifyJWT, getUserStatus);
+router.get("/all-users", verifyJWT, getAllUserStatus);
 
 router.post("/forgot-password", forgotPassword);
 
@@ -39,5 +41,9 @@ router.patch(
   upload.single("avatar"),
   updateUserProfile,
 );
+
+router.post("/send-expiration-email", sendExpirationEmail);
+
+router.patch("/update-account/:id", updateUserAccount);
 
 export default router;

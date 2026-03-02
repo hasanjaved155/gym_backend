@@ -5,18 +5,19 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import crypto from "crypto";
 import { sendEmail } from "./sendEmail.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
 
     const accessToken = await user.generateAccessToken();
-    const refreshToken = await user.generateRefreshToken();
+    const newRefreshToken = await user.generateRefreshToken();
 
-    user.refreshToken = refreshToken;
+    user.refreshToken = newRefreshToken;
     await user.save({ validateBeforeSave: false });
 
-    return { accessToken, refreshToken };
+    return { accessToken, newRefreshToken };
   } catch (error) {
     throw new ApiError(
       500,
@@ -65,6 +66,10 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cloudinary Avatar file is required");
   }
 
+  // ✅ Calculate expirationDate (1 month after joinDate)
+  const expirationDate = new Date(joinDate);
+  expirationDate.setMonth(expirationDate.getMonth() + 1);
+
   //create user object-create entry in db
   const user = await User.create({
     username: username.toLowerCase(),
@@ -73,6 +78,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     joinDate,
+    expirationDate,
   });
 
   //remove password and refresh token field from response
@@ -110,7 +116,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw ApiError(401, "User Password is Incorrect");
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+  const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(
     user._id,
   );
 
@@ -121,20 +127,21 @@ export const loginUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
-    sameSite: "None",
+    sameSite: "Lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("refreshToken", newRefreshToken, options)
     .send(
       new ApiResponse(
         200,
         {
           user: createdUser,
           accessToken,
-          refreshToken,
+          newRefreshToken,
         },
         "User Logged in successfully",
       ),
@@ -233,7 +240,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
-    sameSite: "None",
+    sameSite: "Lax",
   };
 
   return res
@@ -243,15 +250,17 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .send(new ApiResponse(200, {}, "User Logged Out Successfully"));
 });
 
-export const getUserStatus = asyncHandler(async (req, res) => {
+export const getAllUserStatus = asyncHandler(async (req, res) => {
+  const users = await User.find()
+    .sort({ joinDate: -1 })
+    .select("-password -refreshToken");
   return res.status(200).send(
     new ApiResponse(
       200,
       {
-        user: req.user,
-        accessToken: req.cookies?.accessToken,
+        users,
       },
-      "User authentication status fetched successfully",
+      "Users fetched successfully",
     ),
   );
 });
@@ -261,6 +270,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     req.cookies?.refreshToken ||
     req.header("Authorization")?.replace("Bearer ", "") ||
     req.body?.refreshToken;
+  // console.log("incomingRefreshToken", incomingRefreshToken);
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized request");
@@ -275,14 +285,24 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     if (!user || user.refreshToken !== incomingRefreshToken) {
       throw new ApiError(401, "Invalid refresh token");
     }
+    // console.log("user", user);
+
+    const newUser = await User.findById(user._id).select(
+      "-password -refreshToken",
+    );
+    // console.log("newUser", newUser);
 
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefreshTokens(user._id);
 
+    // console.log("accessToken", accessToken);
+    // console.log("newRefreshToken", newRefreshToken);
+
     const options = {
       httpOnly: true,
       secure: true,
-      sameSite: "None",
+      sameSite: "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     };
 
     return res
@@ -293,13 +313,15 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
         new ApiResponse(
           200,
           {
+            newUser,
             accessToken,
-            refreshToken: newRefreshToken,
+            // refreshToken: newRefreshToken,
           },
           "Access token refreshed successfully",
         ),
       );
   } catch (error) {
+    console.log("error", error.message);
     throw new ApiError(401, error?.message || "Invalid refresh token");
   }
 });
@@ -334,4 +356,38 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .send(new ApiResponse(200, user, "Profile updated successfully"));
+});
+
+export const updateUserAccount = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  console.log(id);
+  const { joinDate, active } = req.body;
+  // console.log(joinDate, active);
+
+  if (!id) {
+    throw new ApiError(400, "User ID is required");
+  }
+  const user = await User.findById(id);
+
+  // ✅ Update joinDate
+  if (joinDate) {
+    user.joinDate = joinDate;
+
+    // ✅ Automatically set expirationDate (1 month after joinDate)
+    const expirationDate = new Date(joinDate);
+    expirationDate.setMonth(expirationDate.getMonth() + 1);
+    user.expirationDate = expirationDate;
+  }
+
+  // ✅ Update active
+
+  if (active !== undefined) {
+    user.active = active;
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, user, "User account updated successfully"));
 });
